@@ -10,7 +10,8 @@ from sentence_transformers import SentenceTransformer
 DATA_DIR = "data"
 CHUNKS_FILE = os.path.join(DATA_DIR, "chunks.jsonl")
 EMBEDDINGS_FILE = os.path.join(DATA_DIR, "embeddings.pkl")
-MODEL_NAME = "all-MiniLM-L6-v2"  # A lightweight model that balances speed and quality
+# Upgraded to a more powerful model - better accuracy for question-answering
+MODEL_NAME = "multi-qa-mpnet-base-dot-v1"  # Upgraded from all-MiniLM-L6-v2
 
 def ensure_data_dir():
     """Make sure data directory exists"""
