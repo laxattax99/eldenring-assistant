@@ -9,7 +9,7 @@ from scrape_page import scrape_wiki_page
 from langchain_chunker import process_page, save_chunks_to_jsonl
 
 # Configuration
-OUTPUT_DIR = "/data"
+OUTPUT_DIR = "data"
 CHUNKS_FILE = os.path.join(OUTPUT_DIR, "chunks.jsonl")
 URLS_FILE = os.path.join(OUTPUT_DIR, "processed_urls.json")
 DELAY = 1  # Delay between requests in seconds to avoid hitting the server too hard
