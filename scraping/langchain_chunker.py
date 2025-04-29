@@ -1,5 +1,6 @@
 import json
 import sys
+import re
 from typing import List, Dict, Any
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -7,6 +8,14 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain.schema import Document
 
 from scrape_page import scrape_wiki_page
+
+def clean_text(text: str) -> str:
+    """Clean and normalize text for better chunking"""
+    # Remove extra whitespace
+    text = re.sub(r'\s+', ' ', text)
+    # Remove duplicate newlines
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    return text.strip()
 
 def chunk_with_langchain(
     content: str,
@@ -96,6 +105,124 @@ def chunk_with_langchain(
     
     return chunks
 
+def process_page(page_data: Dict[str, Any], chunk_size: int = 500, chunk_overlap: int = 100) -> List[Dict[str, Any]]:
+    """
+    Process a page into chunks suitable for embedding
+    
+    Args:
+        page_data: Dictionary with page content and metadata
+        chunk_size: Maximum size of each chunk
+        chunk_overlap: Number of characters to overlap between chunks
+        
+    Returns:
+        List of chunks with metadata
+    """
+    if not page_data or "content" not in page_data:
+        return []
+    
+    # Extract page metadata
+    url = page_data.get("url", "")
+    title = page_data.get("title", "")
+    
+    # Handle different content types
+    content = page_data["content"]
+    
+    # Special handling for item pages - keep smaller chunks to preserve item details
+    is_item_page = any(keyword in title.lower() for keyword in [
+        "item", "weapon", "spell", "incantation", "sorcery", "tear", "talisman", 
+        "armor", "shield", "staff", "sacred", "flask"
+    ])
+    
+    # Special handling for location pages - larger chunks for better context
+    is_location_page = any(keyword in title.lower() for keyword in [
+        "location", "area", "dungeon", "cave", "ruins", "castle", "fort", "tower"
+    ])
+    
+    # Adjust chunk size based on content type
+    adjusted_chunk_size = chunk_size
+    adjusted_chunk_overlap = chunk_overlap
+    
+    if is_item_page:
+        # Smaller chunks for items to capture specific details
+        adjusted_chunk_size = 400
+        adjusted_chunk_overlap = 150  # Higher overlap for items to maintain context
+    elif is_location_page:
+        # Larger chunks for locations to keep more context
+        adjusted_chunk_size = 600
+        adjusted_chunk_overlap = 100
+    
+    # Create text splitter
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=adjusted_chunk_size,
+        chunk_overlap=adjusted_chunk_overlap,
+        length_function=len,
+        separators=["\n\n", "\n", ". ", " ", ""]
+    )
+    
+    # Clean and prepare text
+    cleaned_content = clean_text(content)
+    
+    # Handle sections if available
+    sections = page_data.get("sections", [])
+    chunks = []
+    
+    # Process sections if available
+    if sections and len(sections) > 0:
+        for section in sections:
+            section_title = section.get("title", "")
+            section_content = clean_text(section.get("content", ""))
+            
+            if not section_content:
+                continue
+            
+            # For item pages, try to keep entire sections together if possible
+            if is_item_page and len(section_content) < adjusted_chunk_size * 1.2:
+                # If section is not too large, keep it intact
+                chunks.append({
+                    "text": section_content,
+                    "metadata": {
+                        "url": url,
+                        "title": title,
+                        "section": section_title
+                    }
+                })
+            else:
+                # Otherwise, split the section
+                section_chunks = text_splitter.create_documents([section_content])
+                
+                for i, chunk in enumerate(section_chunks):
+                    chunks.append({
+                        "text": chunk.page_content,
+                        "metadata": {
+                            "url": url,
+                            "title": title,
+                            "section": section_title,
+                            "chunk_index": i
+                        }
+                    })
+    else:
+        # No sections, process the entire content
+        text_chunks = text_splitter.create_documents([cleaned_content])
+        
+        for i, chunk in enumerate(text_chunks):
+            chunks.append({
+                "text": chunk.page_content,
+                "metadata": {
+                    "url": url,
+                    "title": title,
+                    "chunk_index": i
+                }
+            })
+    
+    # Special handling for title page - make sure the first chunk has the title information
+    if chunks and title:
+        first_chunk = chunks[0]
+        if title.lower() not in first_chunk["text"].lower():
+            title_info = f"{title}\n\n"
+            chunks[0]["text"] = title_info + chunks[0]["text"]
+    
+    return chunks
+
 def save_chunks_to_jsonl(chunks: List[Dict[str, Any]], output_file: str) -> None:
     """Save chunks to a JSONL file for later processing"""
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -103,17 +230,6 @@ def save_chunks_to_jsonl(chunks: List[Dict[str, Any]], output_file: str) -> None
             f.write(json.dumps(chunk) + '\n')
     
     print(f"Saved {len(chunks)} chunks to {output_file}")
-
-def process_page(page_data: Dict[str, Any], chunk_size: int = 500, chunk_overlap: int = 50) -> List[Dict[str, Any]]:
-    """Process a page and chunk its content using LangChain"""
-    return chunk_with_langchain(
-        page_data['content'],
-        page_data['title'],
-        page_data['url'],
-        page_data['type'],
-        chunk_size,
-        chunk_overlap
-    )
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

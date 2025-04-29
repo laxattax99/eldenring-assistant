@@ -23,7 +23,7 @@ COLLECTION_NAME = "elden_ring_wiki"
 # Upgraded to a more powerful embedding model - better accuracy for question-answering
 EMBEDDING_MODEL = "multi-qa-mpnet-base-dot-v1"  # Upgraded from all-MiniLM-L6-v2
 BATCH_SIZE = 100  # How many chunks to process in one batch
-DELAY = 1  # Delay between scraping pages to be nice to the server
+DELAY = 0.3  # Delay between scraping pages to be nice to the server
 
 def ensure_dirs():
     """Make sure data directories exist"""
@@ -104,6 +104,24 @@ def process_urls(urls: List[str], collection, chunk_size: int = 500, chunk_overl
             if not chunks:
                 print(f"No chunks generated for {url}")
                 continue
+            
+            # Create a special title-focused chunk for better title matching
+            if page_data.get("title") and page_data.get("content"):
+                title = page_data["title"]
+                # Add a special chunk with title and first 200 characters of content
+                title_chunk_text = f"{title} - {page_data['content'][:200]}..."
+                title_chunk = {
+                    "text": title_chunk_text,
+                    "metadata": {
+                        "url": page_data["url"],
+                        "title": title,
+                        "chunk_type": "title_focused",  # Mark as special title chunk
+                        "page_type": page_data.get("type", "unknown"),
+                        "chunk_index": 0  # Always the first chunk
+                    }
+                }
+                # Add title chunk to regular chunks
+                chunks.append(title_chunk)
                 
             # Prepare data for ChromaDB
             ids = [str(uuid.uuid4()) for _ in chunks]
