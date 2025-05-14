@@ -77,6 +77,8 @@ def determine_page_type(url, soup):
             return 'incantation'
         if 'armor' in breadcrumb_text:
             return 'armor'
+        if 'talismans' in breadcrumb_text:
+            return 'talisman'
         if 'location' in breadcrumb_text or 'locations' in breadcrumb_text:
             return 'location'
         if 'npc' in breadcrumb_text or 'npcs' in breadcrumb_text:

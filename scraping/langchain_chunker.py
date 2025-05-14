@@ -123,20 +123,18 @@ def process_page(page_data: Dict[str, Any], chunk_size: int = 500, chunk_overlap
     # Extract page metadata
     url = page_data.get("url", "")
     title = page_data.get("title", "")
+    page_type = page_data.get("type", "")
     
     # Handle different content types
     content = page_data["content"]
     
     # Special handling for item pages - keep smaller chunks to preserve item details
-    is_item_page = any(keyword in title.lower() for keyword in [
-        "item", "weapon", "spell", "incantation", "sorcery", "tear", "talisman", 
-        "armor", "shield", "staff", "sacred", "flask"
-    ])
+
+    is_item_page = (page_type in ["item", "weapon", "armor", "spell", "incantation", "sorcery", "tear", "talisman", "shield", "staff", "sacred", "flask"])
     
     # Special handling for location pages - larger chunks for better context
-    is_location_page = any(keyword in title.lower() for keyword in [
-        "location", "area", "dungeon", "cave", "ruins", "castle", "fort", "tower"
-    ])
+    
+    is_location_page = (page_type == "location")
     
     # Adjust chunk size based on content type
     adjusted_chunk_size = chunk_size
@@ -162,57 +160,20 @@ def process_page(page_data: Dict[str, Any], chunk_size: int = 500, chunk_overlap
     # Clean and prepare text
     cleaned_content = clean_text(content)
     
-    # Handle sections if available
-    sections = page_data.get("sections", [])
     chunks = []
     
-    # Process sections if available
-    if sections and len(sections) > 0:
-        for section in sections:
-            section_title = section.get("title", "")
-            section_content = clean_text(section.get("content", ""))
-            
-            if not section_content:
-                continue
-            
-            # For item pages, try to keep entire sections together if possible
-            if is_item_page and len(section_content) < adjusted_chunk_size * 1.2:
-                # If section is not too large, keep it intact
-                chunks.append({
-                    "text": section_content,
-                    "metadata": {
-                        "url": url,
-                        "title": title,
-                        "section": section_title
-                    }
-                })
-            else:
-                # Otherwise, split the section
-                section_chunks = text_splitter.create_documents([section_content])
-                
-                for i, chunk in enumerate(section_chunks):
-                    chunks.append({
-                        "text": chunk.page_content,
-                        "metadata": {
-                            "url": url,
-                            "title": title,
-                            "section": section_title,
-                            "chunk_index": i
-                        }
-                    })
-    else:
-        # No sections, process the entire content
-        text_chunks = text_splitter.create_documents([cleaned_content])
-        
-        for i, chunk in enumerate(text_chunks):
-            chunks.append({
-                "text": chunk.page_content,
-                "metadata": {
-                    "url": url,
-                    "title": title,
-                    "chunk_index": i
-                }
-            })
+    text_chunks = text_splitter.create_documents([cleaned_content])
+    
+    for i, chunk in enumerate(text_chunks):
+        chunks.append({
+            "text": chunk.page_content,
+            "metadata": {
+                "url": url,
+                "title": title,
+                "page_type": page_type,
+                "chunk_index": i
+            }
+        })
     
     # Special handling for title page - make sure the first chunk has the title information
     if chunks and title:
