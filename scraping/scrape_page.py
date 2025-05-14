@@ -61,44 +61,33 @@ def determine_page_type(url, soup):
     """
     Try to determine the page type (boss, weapon, sorcery, etc.) based on URL and content
     """
-    # Extract the page name from URL
-    path = urlparse(url).path
-    page_name = path.split('/')[-1].lower()
-    
-    # Check URL patterns
-    if '+boss' in page_name:
-        return 'boss'
+    # First check for breadcrumbs which are most reliable
+    breadcrumb_div = soup.find('div', id='breadcrumbs-container')
+    if breadcrumb_div:
+        breadcrumb_text = breadcrumb_div.text.lower()
         
-    # Check for boss signs in content
-    content_text = soup.get_text().lower()
-    if re.search(r'boss (overview|information|guide)', content_text):
-        return 'boss'
-        
-    # Check tables and headings for type clues
-    for table in soup.find_all('table'):
-        if 'weapon type' in table.text.lower():
+        # Check for specific page types in breadcrumbs
+        if 'weapons' in breadcrumb_text:
             return 'weapon'
-        if 'fp cost' in table.text.lower() and 'sorcery' in table.text.lower():
+        if 'bosses' in breadcrumb_text:
+            return 'boss'
+        if 'sorceries' in breadcrumb_text:
             return 'sorcery'
-        if 'fp cost' in table.text.lower() and 'incantation' in table.text.lower():
+        if 'incantations' in breadcrumb_text:
             return 'incantation'
+        if 'armor' in breadcrumb_text:
+            return 'armor'
+        if 'location' in breadcrumb_text or 'locations' in breadcrumb_text:
+            return 'location'
+        if 'npc' in breadcrumb_text or 'npcs' in breadcrumb_text:
+            return 'npc'
+        if 'items' in breadcrumb_text:
+            return 'item'
+        if 'ashes' in breadcrumb_text:
+            return 'ash'
+        if 'talismans' in breadcrumb_text:
+            return 'talisman'
     
-    # Check for armor indicators
-    if 'armor set' in soup.text.lower() or 'weight:' in soup.text.lower():
-        return 'armor'
-        
-    # Check for item indicators
-    if 'item location' in soup.text.lower() or 'consumable' in soup.text.lower():
-        return 'item'
-        
-    # Check for NPC indicators
-    if 'npc' in soup.text.lower() or 'questline' in soup.text.lower():
-        return 'npc'
-        
-    # Check for location indicators
-    if 'region' in soup.text.lower() or 'map location' in soup.text.lower():
-        return 'location'
-        
     # Default to "other" if we can't determine the type
     return 'other'
 
