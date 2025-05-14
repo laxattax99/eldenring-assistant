@@ -7,14 +7,17 @@ from typing import List, Dict, Any
 DATA_DIR = "data"
 DB_DIR = os.path.join(DATA_DIR, "chroma_db")
 COLLECTION_NAME = "elden_ring_wiki"
-EMBEDDING_MODEL = "multi-qa-mpnet-base-dot-v1"
+EMBEDDING_MODEL = "all-mpnet-base-v2"
 
 # Test queries
 TEST_QUERIES = [
-    "Sacred Tear",
-    "Kindred of Rot's Exultation",
-    "Writheblood Ruins",
-    "Messmer the Impaler"
+    "Hookclaws",
+    "malenia",
+    "stormveil",
+    "rykard",
+    "stormhill",
+    "mistwood",
+    "renala"
 ]
 
 def connect_to_db():
@@ -40,7 +43,7 @@ def connect_to_db():
         print(f"Error connecting to ChromaDB: {e}")
         return None
 
-def test_search(collection, query: str, n_results: int = 2):
+def test_search(collection, query: str, n_results: int = 5):
     """Test a specific search query and display results"""
     print(f"\n\n{'='*80}")
     print(f"SEARCH QUERY: '{query}'")
@@ -81,7 +84,7 @@ def main():
     
     # Run each test query
     for query in TEST_QUERIES:
-        test_search(collection, query, n_results=2)
+        test_search(collection, query, n_results=5)
     
     print("\nSearch testing complete!")
 

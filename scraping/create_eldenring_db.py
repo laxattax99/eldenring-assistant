@@ -21,7 +21,7 @@ DB_DIR = os.path.join(DATA_DIR, "chroma_db")
 PROCESSED_URLS_FILE = os.path.join(DATA_DIR, "db_processed_urls.json")
 COLLECTION_NAME = "elden_ring_wiki"
 # Upgraded to a more powerful embedding model - better accuracy for question-answering
-EMBEDDING_MODEL = "multi-qa-mpnet-base-dot-v1"  # Upgraded from all-MiniLM-L6-v2
+EMBEDDING_MODEL = "all-mpnet-base-v2"  # Upgraded from all-MiniLM-L6-v2
 BATCH_SIZE = 100  # How many chunks to process in one batch
 DELAY = 0.3  # Delay between scraping pages to be nice to the server
 
