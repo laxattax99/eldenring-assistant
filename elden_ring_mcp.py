@@ -57,12 +57,14 @@ except Exception as e:
 
 
 @mcp.tool()
-async def search_elden_ring(query: str, n_results: int = 25) -> str:
+async def search_elden_ring(query: str, n_results: int = 25, page_type: str = None) -> str:
     """
     Search for any Elden Ring related information using natural language queries.
     
     Args:
         query: A natural language query about anything in Elden Ring (items, locations, NPCs, ashes of war, etc.)
+        n_results: The number of results to return.
+        page_type: Optional filter for specific page types (e.g., "weapon", "boss", "sorcery", "incantation", "armor", "talisman", "location", "npc", etc.)
         
     Returns:
         Relevant information matching the query from the Elden Ring wiki
@@ -74,12 +76,20 @@ async def search_elden_ring(query: str, n_results: int = 25) -> str:
         print("WARNING: ChromaDB collection is not available - using dummy responses", file=sys.stderr)
         return f"The Elden Ring database is currently unavailable. This could be due to a connection issue with ChromaDB. Please check your database setup and ensure the ChromaDB collection is properly loaded."
     
+    # Set up query parameters
+    query_params = {
+        "query_texts": [query],
+        "n_results": n_results,
+        "include": ["documents", "metadatas"],
+    }
+    
+    # Add conditional filtering based on page_type
+    if page_type is not None:
+        query_params["where"] = {"page_type": page_type}
+        print(f"Filtering by page_type: {page_type}", file=sys.stderr)
+    
     # query chroma DB with our query
-    results = collection.query(
-        query_texts=[query],
-        n_results=n_results,
-        include=["documents", "metadatas"],
-    )
+    results = collection.query(**query_params)
     
     # Format the response
     if not results:
@@ -105,7 +115,7 @@ async def search_elden_ring(query: str, n_results: int = 25) -> str:
     return formatted_results
 
 @mcp.tool()
-async def search_elden_ring_by_title(title: str, n_results: int = 100) -> str:
+async def search_elden_ring_by_title(title: str, n_results: int = 1000) -> str:
     """
     Search for any Elden Ring related information using a title. 
     Sort by chunk_index so the wiki page can be read in order.
