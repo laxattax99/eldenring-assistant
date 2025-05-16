@@ -87,6 +87,8 @@ def determine_page_type(url, soup):
             return 'item'
         if 'ashes' in breadcrumb_text:
             return 'ash'
+        if 'skills' in breadcrumb_text:
+            return 'skill'
         if 'talismans' in breadcrumb_text:
             return 'talisman'
     
